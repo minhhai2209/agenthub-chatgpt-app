@@ -283,7 +283,8 @@ async function main() {
   };
 
   const app = createMcpExpressApp({
-    host: config.publicBaseUrl.hostname === "127.0.0.1" ? "127.0.0.1" : "0.0.0.0",
+    // Containers must bind all interfaces so Cloud Run can reach the health and MCP endpoints.
+    host: "0.0.0.0",
   });
 
   app.get("/", (_req, res) => {

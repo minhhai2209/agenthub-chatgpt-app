@@ -24,6 +24,8 @@ The app uses ChatGPT Apps SDK / MCP, returns markdown-first tool output, and aut
 
 `AGENTHUB_REPO_SLUG` is required. The app only works against the exact AgentHub repo provided in that environment variable.
 
+The server always binds `0.0.0.0` inside the container. `AGENTHUB_THREAD_APP_PUBLIC_URL` is only for OAuth/public metadata and callback URLs.
+
 ## Local Run
 
 ```bash
