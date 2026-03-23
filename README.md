@@ -53,6 +53,8 @@ docker run --rm -p 8080:8080 \
   agenthub-chatgpt-app
 ```
 
+The image does not set a default `PORT`. Pass it explicitly for local Docker runs, or let Cloud Run inject it at runtime.
+
 ## ChatGPT Developer Mode Setup
 
 1. Deploy the container to a public HTTPS URL.
