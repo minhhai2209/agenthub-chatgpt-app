@@ -123,14 +123,19 @@ function registerThreadTool(server, name, descriptor, handler, authConfig) {
 
 function createThreadAppServer(authConfig) {
   const server = new McpServer({ name: APP_NAME, version: APP_VERSION });
-  const threadNumberSchema = z.number().int().positive().describe("Numeric thread number.");
+  const threadNumberSchema = z
+    .number()
+    .int()
+    .positive()
+    .describe("Numeric thread number, also called the issue number.");
 
   registerThreadTool(
     server,
     "get_thread",
     {
       title: "Get thread",
-      description: "Read thread metadata, workspace, labels, status labels, and whether writes are currently blocked.",
+      description:
+        "Read thread metadata for a thread or issue, including workspace, labels, status labels, and whether writes are currently blocked.",
       inputSchema: {
         thread_number: threadNumberSchema,
       },
@@ -154,7 +159,8 @@ function createThreadAppServer(authConfig) {
     "get_last_ai_response",
     {
       title: "Get last AI response",
-      description: "Read the latest AI response in the thread, excluding codex draft follow-up comments.",
+      description:
+        "Read the latest AI response in the thread or issue, excluding codex draft follow-up comments. AI responses are comments or messages left by the automation.",
       inputSchema: {
         thread_number: threadNumberSchema,
       },
@@ -178,7 +184,8 @@ function createThreadAppServer(authConfig) {
     "get_thread_transcript",
     {
       title: "Get thread transcript",
-      description: "Read the full thread transcript in markdown, preserving original message bodies and classifying message kinds.",
+      description:
+        "Read the full thread or issue transcript in markdown, preserving original message or comment bodies and classifying message kinds.",
       inputSchema: {
         thread_number: threadNumberSchema,
       },
@@ -202,7 +209,8 @@ function createThreadAppServer(authConfig) {
     "get_next_human_message",
     {
       title: "Get next human message",
-      description: "Read the effective next human message, preferring an explicit human follow-up over a codex draft follow-up.",
+      description:
+        "Read the effective next human message or comment, preferring an explicit human follow-up comment over a codex draft follow-up comment.",
       inputSchema: {
         thread_number: threadNumberSchema,
       },
@@ -226,10 +234,14 @@ function createThreadAppServer(authConfig) {
     "save_next_human_message",
     {
       title: "Save next human message",
-      description: "Create or update the next explicit human message in the thread. Draft follow-up comments are never edited, and writes are blocked while the thread is doing.",
+      description:
+        "Create or update the next explicit human message or comment in the thread or issue. Draft follow-up comments are never edited, and writes are blocked while the thread is doing.",
       inputSchema: {
         thread_number: threadNumberSchema,
-        body: z.string().min(1).describe("Markdown body for the next human message."),
+        body: z
+          .string()
+          .min(1)
+          .describe("Markdown body for the next human message or comment."),
       },
       annotations: {
         readOnlyHint: false,
@@ -251,7 +263,8 @@ function createThreadAppServer(authConfig) {
     "approve_next_message",
     {
       title: "Approve next message",
-      description: "Queue the thread again by applying the todo status, but only when the next message already exists and the thread is not doing.",
+      description:
+        "Queue the thread or issue again by applying the todo status, but only when the next message or comment already exists and the thread is not doing.",
       inputSchema: {
         thread_number: threadNumberSchema,
       },

@@ -13,6 +13,11 @@ Minimal ChatGPT app for AgentHub thread workflows.
 
 The app uses ChatGPT Apps SDK / MCP, returns markdown-first tool output, and authenticates users through GitHub OAuth without a database.
 
+Terminology used by the tools:
+
+- `thread` also means GitHub issue
+- `message` also means GitHub comment
+
 ## Required Environment Variables
 
 - `AGENTHUB_REPO_SLUG`
