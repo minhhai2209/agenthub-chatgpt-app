@@ -22,6 +22,35 @@ const APP_VERSION = "0.2.0";
 const DEFAULT_PORT = 8080;
 const MCP_PATH = "/mcp";
 
+function renderSetupMarkdown({ repoSlug, missingConfig = [], publicUrl }) {
+  const missing = [];
+  if (!repoSlug) {
+    missing.push("AGENTHUB_REPO_SLUG (or REPO_OPS_REPO_SLUG)");
+  }
+  missing.push(...missingConfig);
+
+  return [
+    "# Setup",
+    `- ready: ${missing.length === 0 ? "yes" : "no"}`,
+    `- repo_slug: ${repoSlug || "(missing)"}`,
+    `- public_url: ${publicUrl || "(missing)"}`,
+    `- missing: ${missing.length ? missing.join(", ") : "(none)"}`,
+    "",
+    ...(missing.length
+      ? [
+          "## Next Steps",
+          "",
+          "- Set the missing environment variables.",
+          "- Redeploy or restart the service.",
+        ]
+      : []),
+  ].join("\n");
+}
+
+function sendSetupMarkdown(res, statusCode, setupState) {
+  res.status(statusCode).type("text/markdown").send(renderSetupMarkdown(setupState));
+}
+
 function textResult(text) {
   return {
     content: [{ type: "text", text }],
@@ -263,24 +292,13 @@ function attachOptionalBearerAuth(verifier) {
 async function main() {
   const port = Number(process.env.PORT || process.env.REPO_OPS_THREAD_APP_PORT || DEFAULT_PORT);
   const repoSlug = resolveRepoSlug();
-  if (!repoSlug) {
-    process.stderr.write("[thread-app] Missing repo slug. Set AGENTHUB_REPO_SLUG or REPO_OPS_REPO_SLUG.\n");
-    process.exit(1);
-  }
-
   const { config, missing } = resolveThreadAppOAuthConfig({ port });
-  if (missing.length) {
-    process.stderr.write(`[thread-app] Missing OAuth config: ${missing.join(", ")}\n`);
-    process.exit(1);
-  }
-
-  const oauthProvider = new ThreadAppOAuthProvider(config);
-  const resourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(config.resourceServerUrl);
-  const authConfig = {
+  const setupState = {
     repoSlug,
-    mcpScope: config.mcpScope,
-    resourceMetadataUrl,
+    missingConfig: missing,
+    publicUrl: process.env.AGENTHUB_THREAD_APP_PUBLIC_URL || config.publicBaseUrl.href,
   };
+  const setupReady = Boolean(repoSlug) && missing.length === 0;
 
   const app = createMcpExpressApp({
     // Containers must bind all interfaces so Cloud Run can reach the health and MCP endpoints.
@@ -288,105 +306,135 @@ async function main() {
   });
 
   app.get("/", (_req, res) => {
-    res.type("text/plain").send("AgentHub thread app");
+    if (setupReady) {
+      res.type("text/plain").send("AgentHub thread app");
+      return;
+    }
+    sendSetupMarkdown(res, 503, setupState);
   });
 
   app.get("/healthz", (_req, res) => {
     res.type("text/plain").send("ok");
   });
 
-  app.get("/oauth/github/callback", async (req, res) => {
-    await oauthProvider.handleGitHubCallback(req, res);
+  app.get("/setupz", (_req, res) => {
+    sendSetupMarkdown(res, setupReady ? 200 : 503, setupState);
   });
 
-  app.use(
-    mcpAuthRouter({
-      provider: oauthProvider,
-      issuerUrl: config.publicBaseUrl,
-      resourceServerUrl: config.resourceServerUrl,
-      scopesSupported: [config.mcpScope],
-      resourceName: "AgentHub ChatGPT App",
-      clientRegistrationOptions: {
-        clientIdGeneration: false,
-      },
-    }),
-  );
+  if (!setupReady) {
+    const sendUnavailable = (_req, res) => {
+      sendSetupMarkdown(res, 503, setupState);
+    };
+    app.all(MCP_PATH, sendUnavailable);
+    app.get("/oauth/github/callback", sendUnavailable);
+    app.get("/.well-known/oauth-protected-resource/mcp", sendUnavailable);
+    app.get("/.well-known/oauth-authorization-server", sendUnavailable);
+    app.get("/authorize", sendUnavailable);
+    app.post("/authorize", sendUnavailable);
+    app.post("/token", sendUnavailable);
+    app.post("/register", sendUnavailable);
+  } else {
+    const oauthProvider = new ThreadAppOAuthProvider(config);
+    const resourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(config.resourceServerUrl);
+    const authConfig = {
+      repoSlug,
+      mcpScope: config.mcpScope,
+      resourceMetadataUrl,
+    };
 
-  const optionalBearerAuth = attachOptionalBearerAuth(oauthProvider);
-  const transports = {};
+    app.get("/oauth/github/callback", async (req, res) => {
+      await oauthProvider.handleGitHubCallback(req, res);
+    });
 
-  app.post(MCP_PATH, optionalBearerAuth, async (req, res) => {
-    const sessionId = req.headers["mcp-session-id"];
-    try {
-      let transport = sessionId ? transports[sessionId] : null;
-      if (!transport && !sessionId && isInitializeRequest(req.body)) {
-        transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => randomUUID(),
-          onsessioninitialized: (newSessionId) => {
-            transports[newSessionId] = transport;
-          },
-        });
-        transport.onclose = () => {
-          const existingSessionId = transport.sessionId;
-          if (existingSessionId && transports[existingSessionId]) {
-            delete transports[existingSessionId];
-          }
-        };
-        const server = createThreadAppServer(authConfig);
-        await server.connect(transport);
+    app.use(
+      mcpAuthRouter({
+        provider: oauthProvider,
+        issuerUrl: config.publicBaseUrl,
+        resourceServerUrl: config.resourceServerUrl,
+        scopesSupported: [config.mcpScope],
+        resourceName: "AgentHub ChatGPT App",
+        clientRegistrationOptions: {
+          clientIdGeneration: false,
+        },
+      }),
+    );
+
+    const optionalBearerAuth = attachOptionalBearerAuth(oauthProvider);
+    const transports = {};
+
+    app.post(MCP_PATH, optionalBearerAuth, async (req, res) => {
+      const sessionId = req.headers["mcp-session-id"];
+      try {
+        let transport = sessionId ? transports[sessionId] : null;
+        if (!transport && !sessionId && isInitializeRequest(req.body)) {
+          transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
+            onsessioninitialized: (newSessionId) => {
+              transports[newSessionId] = transport;
+            },
+          });
+          transport.onclose = () => {
+            const existingSessionId = transport.sessionId;
+            if (existingSessionId && transports[existingSessionId]) {
+              delete transports[existingSessionId];
+            }
+          };
+          const server = createThreadAppServer(authConfig);
+          await server.connect(transport);
+          await transport.handleRequest(req, res, req.body);
+          return;
+        }
+
+        if (!transport) {
+          res.status(400).json({
+            jsonrpc: "2.0",
+            error: {
+              code: -32000,
+              message: "Bad Request: No valid session ID provided",
+            },
+            id: null,
+          });
+          return;
+        }
+
         await transport.handleRequest(req, res, req.body);
+      } catch (error) {
+        process.stderr.write(`[thread-app] MCP POST failed: ${error?.stack || error}\n`);
+        if (!res.headersSent) {
+          res.status(500).json({
+            jsonrpc: "2.0",
+            error: {
+              code: -32603,
+              message: "Internal server error",
+            },
+            id: null,
+          });
+        }
+      }
+    });
+
+    app.get(MCP_PATH, optionalBearerAuth, async (req, res) => {
+      const sessionId = req.headers["mcp-session-id"];
+      if (!sessionId || !transports[sessionId]) {
+        res.status(400).send("Invalid or missing session ID");
         return;
       }
+      await transports[sessionId].handleRequest(req, res);
+    });
 
-      if (!transport) {
-        res.status(400).json({
-          jsonrpc: "2.0",
-          error: {
-            code: -32000,
-            message: "Bad Request: No valid session ID provided",
-          },
-          id: null,
-        });
+    app.delete(MCP_PATH, optionalBearerAuth, async (req, res) => {
+      const sessionId = req.headers["mcp-session-id"];
+      if (!sessionId || !transports[sessionId]) {
+        res.status(400).send("Invalid or missing session ID");
         return;
       }
-
-      await transport.handleRequest(req, res, req.body);
-    } catch (error) {
-      process.stderr.write(`[thread-app] MCP POST failed: ${error?.stack || error}\n`);
-      if (!res.headersSent) {
-        res.status(500).json({
-          jsonrpc: "2.0",
-          error: {
-            code: -32603,
-            message: "Internal server error",
-          },
-          id: null,
-        });
-      }
-    }
-  });
-
-  app.get(MCP_PATH, optionalBearerAuth, async (req, res) => {
-    const sessionId = req.headers["mcp-session-id"];
-    if (!sessionId || !transports[sessionId]) {
-      res.status(400).send("Invalid or missing session ID");
-      return;
-    }
-    await transports[sessionId].handleRequest(req, res);
-  });
-
-  app.delete(MCP_PATH, optionalBearerAuth, async (req, res) => {
-    const sessionId = req.headers["mcp-session-id"];
-    if (!sessionId || !transports[sessionId]) {
-      res.status(400).send("Invalid or missing session ID");
-      return;
-    }
-    await transports[sessionId].handleRequest(req, res);
-  });
+      await transports[sessionId].handleRequest(req, res);
+    });
+  }
 
   app.listen(port, () => {
     process.stdout.write(
-      `[thread-app] listening on :${port}${MCP_PATH} repo=${repoSlug} public=${config.publicBaseUrl.href}\n`,
+      `[thread-app] listening on :${port}${MCP_PATH} repo=${repoSlug || "(missing)"} public=${config.publicBaseUrl.href} setup=${setupReady ? "ready" : "incomplete"}\n`,
     );
   });
 }
