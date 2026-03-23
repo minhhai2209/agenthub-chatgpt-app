@@ -181,6 +181,31 @@ function createThreadAppServer(authConfig) {
 
   registerThreadTool(
     server,
+    "get_last_machine_message",
+    {
+      title: "Get last machine message",
+      description:
+        "Read the latest machine-generated message or comment in the thread or issue. This can be an AI response, a codex draft follow-up comment, or another automation comment.",
+      inputSchema: {
+        thread_number: threadNumberSchema,
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+        idempotentHint: true,
+      },
+      _meta: {
+        "openai/toolInvocation/invoking": "Reading machine message...",
+        "openai/toolInvocation/invoked": "Machine message ready",
+      },
+    },
+    async ({ thread_number }, _extra, threadService) => threadService.getLastMachineMessageMarkdown(thread_number),
+    authConfig,
+  );
+
+  registerThreadTool(
+    server,
     "get_thread_transcript",
     {
       title: "Get thread transcript",

@@ -6,6 +6,7 @@ Minimal ChatGPT app for AgentHub thread workflows.
 
 - Reads thread metadata
 - Reads the last AI response
+- Reads the last machine message
 - Reads the thread transcript
 - Reads the next human message
 - Saves the next human message with upsert behavior
@@ -95,6 +96,7 @@ Use this to confirm the container, port binding, and Cloud Run health probe work
 
 - `get_thread`
 - `get_last_ai_response`
+- `get_last_machine_message`
 - `get_thread_transcript`
 - `get_next_human_message`
 - `save_next_human_message`

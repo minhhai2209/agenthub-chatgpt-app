@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildWriteGuard,
   findLatestAiResponse,
+  findLatestMachineMessage,
   renderTranscriptMarkdown,
   resolveNextHumanMessage,
   resolveUpsertDecision,
@@ -27,6 +28,11 @@ const draftFollowUp = [
   "Suggested next step",
 ].join("\n");
 
+const automationActivity = [
+  "<!-- issue-watcher:activity -->",
+  "Watcher is still running",
+].join("\n");
+
 const commentsForDraft = [
   { id: 1, body: aiResponseOne, created_at: "2026-03-01T00:00:00Z", user: { login: "owner" } },
   { id: 2, body: draftFollowUp, created_at: "2026-03-01T00:01:00Z", user: { login: "owner" } },
@@ -42,7 +48,16 @@ const commentsForConflict = [
   { id: 12, body: "I added a follow-up manually.", created_at: "2026-03-02T00:05:00Z", user: { login: "other-user" } },
 ];
 
+const commentsForAutomation = [
+  { id: 21, body: aiResponseOne, created_at: "2026-03-03T00:00:00Z", user: { login: "owner" } },
+  { id: 22, body: automationActivity, created_at: "2026-03-03T00:01:00Z", user: { login: "owner" } },
+];
+
 assert.equal(findLatestAiResponse(commentsForConflict)?.comment?.id, 11, "latest AI response should be detected");
+assert.equal(findLatestMachineMessage(commentsForDraft)?.comment?.id, 2, "latest machine message should include draft follow-up");
+assert.equal(findLatestMachineMessage(commentsForDraft)?.source, "codex-draft-follow-up");
+assert.equal(findLatestMachineMessage(commentsForAutomation)?.comment?.id, 22, "latest machine message should include automation comments without AI response text");
+assert.equal(findLatestMachineMessage(commentsForAutomation)?.source, "automation");
 assert.equal(resolveNextHumanMessage(commentsForDraft).source, "codex-draft-follow-up", "draft should be used when no human comment exists");
 assert.equal(resolveNextHumanMessage(commentsForHuman).source, "human", "explicit human should win over draft");
 
