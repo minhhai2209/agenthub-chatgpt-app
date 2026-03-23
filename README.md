@@ -63,6 +63,20 @@ docker run --rm -p 8080:8080 \
 
 The image does not set a default `PORT`. Pass it explicitly for local Docker runs, or let Cloud Run inject it at runtime.
 
+## Check Mode
+
+If you need to isolate Cloud Run startup from the real MCP app, set:
+
+- `AGENTHUB_START_MODE=check`
+
+That runs a tiny Express server instead of the real app. It only exposes:
+
+- `GET /`
+- `GET /healthz`
+- `GET /setupz`
+
+Use this to confirm the container, port binding, and Cloud Run health probe work before re-enabling the real app.
+
 ## ChatGPT Developer Mode Setup
 
 1. Deploy the container to a public HTTPS URL.

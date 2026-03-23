@@ -4,7 +4,7 @@
   "description": "ChatGPT app for AgentHub thread workflows",
   "type": "module",
   "scripts": {
-    "start": "node scripts/thread-app.mjs",
+    "start": "node scripts/thread-app-start.mjs",
     "test": "npm run test:issue-comment-utils && npm run test:thread-api-utils && npm run test:thread-app-oauth",
     "test:issue-comment-utils": "node tests/issue-comment-utils.test.mjs",
     "test:thread-api-utils": "node tests/thread-api-utils.test.mjs",
@@ -16,6 +16,7 @@
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.2.2",
     "@modelcontextprotocol/sdk": "^1.27.1",
+    "express": "^5.1.0",
     "zod": "^3.25.76"
   }
 }
