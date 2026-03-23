@@ -17,7 +17,7 @@ import {
   ThreadAppOAuthProvider,
 } from "../lib/thread-app-oauth.mjs";
 
-const APP_NAME = "agenthub-thread-app";
+const APP_NAME = "agenthub-chatgpt-app";
 const APP_VERSION = "0.2.0";
 const DEFAULT_PORT = 8080;
 const MCP_PATH = "/mcp";
@@ -304,7 +304,7 @@ async function main() {
       issuerUrl: config.publicBaseUrl,
       resourceServerUrl: config.resourceServerUrl,
       scopesSupported: [config.mcpScope],
-      resourceName: "AgentHub Thread App",
+      resourceName: "AgentHub ChatGPT App",
       clientRegistrationOptions: {
         clientIdGeneration: false,
       },

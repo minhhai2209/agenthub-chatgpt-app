@@ -1,5 +1,5 @@
 {
-  "name": "agenthub-thread-app",
+  "name": "agenthub-chatgpt-app",
   "version": "0.1.0",
   "description": "ChatGPT app for AgentHub thread workflows",
   "type": "module",

@@ -1,4 +1,4 @@
-# AgentHub Thread App
+# AgentHub ChatGPT App
 
 Minimal ChatGPT app for AgentHub thread workflows.
 
@@ -42,7 +42,7 @@ The app listens on `PORT`. That matches Google Cloud Run, which injects the port
 ## Docker
 
 ```bash
-docker build -t agenthub-thread-app .
+docker build -t agenthub-chatgpt-app .
 docker run --rm -p 8080:8080 \
   -e PORT=8080 \
   -e AGENTHUB_REPO_SLUG=minhhai2209/second-brain \
@@ -50,7 +50,7 @@ docker run --rm -p 8080:8080 \
   -e AGENTHUB_GITHUB_OAUTH_CLIENT_ID=your-client-id \
   -e AGENTHUB_GITHUB_OAUTH_CLIENT_SECRET=your-client-secret \
   -e AGENTHUB_THREAD_APP_SEALING_SECRET=replace-with-32-plus-random-chars \
-  agenthub-thread-app
+  agenthub-chatgpt-app
 ```
 
 ## ChatGPT Developer Mode Setup
