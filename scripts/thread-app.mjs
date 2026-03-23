@@ -22,6 +22,14 @@ const APP_VERSION = "0.2.0";
 const DEFAULT_PORT = 8080;
 const MCP_PATH = "/mcp";
 
+process.on("uncaughtException", (error) => {
+  process.stderr.write(`[thread-app] uncaughtException: ${error?.stack || error}\n`);
+});
+
+process.on("unhandledRejection", (reason) => {
+  process.stderr.write(`[thread-app] unhandledRejection: ${reason?.stack || reason}\n`);
+});
+
 function renderSetupMarkdown({ repoSlug, missingConfig = [], publicUrl }) {
   const missing = [];
   if (!repoSlug) {
@@ -291,6 +299,7 @@ function attachOptionalBearerAuth(verifier) {
 
 async function main() {
   const port = Number(process.env.PORT || process.env.REPO_OPS_THREAD_APP_PORT || DEFAULT_PORT);
+  process.stdout.write(`[thread-app] booting pid=${process.pid} port=${port}\n`);
   const repoSlug = resolveRepoSlug();
   const { config, missing } = resolveThreadAppOAuthConfig({ port });
   const setupState = {
@@ -299,6 +308,14 @@ async function main() {
     publicUrl: process.env.AGENTHUB_THREAD_APP_PUBLIC_URL || config.publicBaseUrl.href,
   };
   const setupReady = Boolean(repoSlug) && missing.length === 0;
+  if (!setupReady) {
+    const missingSetup = [];
+    if (!repoSlug) {
+      missingSetup.push("AGENTHUB_REPO_SLUG (or REPO_OPS_REPO_SLUG)");
+    }
+    missingSetup.push(...missing);
+    process.stderr.write(`[thread-app] setup incomplete: ${missingSetup.join(", ")}\n`);
+  }
 
   const app = createMcpExpressApp({
     // Containers must bind all interfaces so Cloud Run can reach the health and MCP endpoints.
