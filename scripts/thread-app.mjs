@@ -326,10 +326,12 @@ async function main() {
   });
 
   app.get("/", (_req, res) => {
+    process.stdout.write("[thread-app] route / hit\n");
     res.redirect(INFO_PATH);
   });
 
   app.get(INFO_PATH, (_req, res) => {
+    process.stdout.write(`[thread-app] route ${INFO_PATH} hit setup=${setupReady ? "ready" : "incomplete"}\n`);
     if (setupReady) {
       res.type("text/plain").send("AgentHub thread app");
       return;
@@ -338,10 +340,12 @@ async function main() {
   });
 
   app.get(INFO_HEALTH_PATH, (_req, res) => {
+    process.stdout.write(`[thread-app] route ${INFO_HEALTH_PATH} hit\n`);
     res.type("text/plain").send("ok");
   });
 
   app.get(INFO_SETUP_PATH, (_req, res) => {
+    process.stdout.write(`[thread-app] route ${INFO_SETUP_PATH} hit\n`);
     sendSetupMarkdown(res, setupReady ? 200 : 503, setupState);
   });
 
