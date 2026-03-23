@@ -21,6 +21,9 @@ const APP_NAME = "agenthub-chatgpt-app";
 const APP_VERSION = "0.2.0";
 const DEFAULT_PORT = 8080;
 const MCP_PATH = "/mcp";
+const INFO_PATH = "/info";
+const INFO_HEALTH_PATH = "/info/health";
+const INFO_SETUP_PATH = "/info/setup";
 
 process.on("uncaughtException", (error) => {
   process.stderr.write(`[thread-app] uncaughtException: ${error?.stack || error}\n`);
@@ -323,6 +326,10 @@ async function main() {
   });
 
   app.get("/", (_req, res) => {
+    res.redirect(INFO_PATH);
+  });
+
+  app.get(INFO_PATH, (_req, res) => {
     if (setupReady) {
       res.type("text/plain").send("AgentHub thread app");
       return;
@@ -330,11 +337,11 @@ async function main() {
     sendSetupMarkdown(res, 503, setupState);
   });
 
-  app.get("/healthz", (_req, res) => {
+  app.get(INFO_HEALTH_PATH, (_req, res) => {
     res.type("text/plain").send("ok");
   });
 
-  app.get("/setupz", (_req, res) => {
+  app.get(INFO_SETUP_PATH, (_req, res) => {
     sendSetupMarkdown(res, setupReady ? 200 : 503, setupState);
   });
 

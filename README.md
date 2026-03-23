@@ -28,8 +28,8 @@ The server always binds `0.0.0.0` inside the container. `AGENTHUB_THREAD_APP_PUB
 
 If setup is incomplete, the app still starts so Cloud Run can finish deployment:
 
-- `GET /healthz` returns `200 ok`
-- `GET /setupz` returns the missing setup items
+- `GET /info/health` returns `200 ok`
+- `GET /info/setup` returns the missing setup items
 - MCP and OAuth routes return `503` until setup is complete
 
 ## Local Run
@@ -71,9 +71,10 @@ If you need to isolate Cloud Run startup from the real MCP app, set:
 
 That runs a tiny Express server instead of the real app. It only exposes:
 
-- `GET /`
-- `GET /healthz`
-- `GET /setupz`
+- `GET /` (redirects to `/info`)
+- `GET /info`
+- `GET /info/health`
+- `GET /info/setup`
 
 Use this to confirm the container, port binding, and Cloud Run health probe work before re-enabling the real app.
 

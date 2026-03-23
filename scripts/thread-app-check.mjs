@@ -32,18 +32,24 @@ const app = express();
 logStep("registering GET /");
 app.get("/", (_req, res) => {
   process.stdout.write("[thread-app-check] route / hit\n");
+  res.redirect("/info");
+});
+
+logStep("registering GET /info");
+app.get("/info", (_req, res) => {
+  process.stdout.write("[thread-app-check] route /info hit\n");
   res.type("text/plain").send("thread-app-check");
 });
 
-logStep("registering GET /healthz");
-app.get("/healthz", (_req, res) => {
-  process.stdout.write("[thread-app-check] route /healthz hit\n");
+logStep("registering GET /info/health");
+app.get("/info/health", (_req, res) => {
+  process.stdout.write("[thread-app-check] route /info/health hit\n");
   res.type("text/plain").send("ok");
 });
 
-logStep("registering GET /setupz");
-app.get("/setupz", (_req, res) => {
-  process.stdout.write("[thread-app-check] route /setupz hit\n");
+logStep("registering GET /info/setup");
+app.get("/info/setup", (_req, res) => {
+  process.stdout.write("[thread-app-check] route /info/setup hit\n");
   res.type("text/markdown").send(
     [
       "# Setup",
